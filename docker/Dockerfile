@@ -9,6 +9,7 @@ RUN groupadd -r jasmin && useradd -r -g jasmin jasmin
 RUN apt-get update && apt-get install -y \
     libffi-dev \
     libssl-dev \
+    git \
     # Run python with jemalloc
     # More on this:
     # - https://zapier.com/engineering/celery-python-jemalloc/
