@@ -5,7 +5,7 @@ Twisted~=23.10.0
 treq~=24.9.1
 pyparsing~=3.3.2
 python-dateutil~=2.9.0
-service_identity~=24.2.0
+service_identity~=26.1.0
 # lockfile is abandoned; swap to filelock in a follow-up.
 lockfile~=0.12.2
 
@@ -18,13 +18,13 @@ smpp.pdu3~=0.6
 smpp.twisted3~=0.8
 python-messaging~=0.5.13
 
-cryptography~=43.0.0
-pyopenssl~=24.2.0
+cryptography~=50.0.1
+pyopenssl~=26.4.0
 
 celery~=5.4.0
 redis~=5.1.0
 
-requests~=2.32.3
+requests~=2.34.2
 
 # For REST API
 python-mimeparse~=2.0.0
