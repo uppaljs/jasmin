@@ -48,6 +48,17 @@ def composeUnicodeMessage(characters, length):
 
 class CodingTestCases(RouterPBProxy, HappySMSCTestCase, SubmitSmTestCaseTools):
     @defer.inlineCallbacks
+    def tearDown(self):
+        # Ensure connectors are stopped even if test failed
+        try:
+            if hasattr(self, 'SMPPClientManagerPBProxy') and self.SMPPClientManagerPBProxy.isConnected:
+                yield self.stopSmppClientConnectors()
+        except Exception:
+            pass
+        # Call parent teardown
+        yield HappySMSCTestCase.tearDown(self)
+
+    @defer.inlineCallbacks
     def run_test(self, content, encoded_content=None, datacoding=None, port=1401):
         yield self.connect('127.0.0.1', self.pbPort)
         yield self.prepareRoutingsAndStartConnector()
@@ -303,8 +314,10 @@ class LongSubmitSmCodingUsingUDHTestCases(CodingTestCases):
 
     @defer.inlineCallbacks
     def tearDown(self):
-        yield CodingTestCases.tearDown(self)
-        self.httpServer_udh.stopListening()
+        try:
+            yield CodingTestCases.tearDown(self)
+        finally:
+            yield self.httpServer_udh.stopListening()
 
     @defer.inlineCallbacks
     def test_gsm0338_at(self):
