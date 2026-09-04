@@ -131,9 +131,10 @@ class HttpServerTestCase(RouterPBTestCase):
 
     @defer.inlineCallbacks
     def tearDown(self):
-        yield RouterPBTestCase.tearDown(self)
-
-        yield self.httpServer.stopListening()
+        try:
+            yield RouterPBTestCase.tearDown(self)
+        finally:
+            yield self.httpServer.stopListening()
 
 
 class SMPPClientManagerPBTestCase(HttpServerTestCase):
@@ -192,15 +193,23 @@ class SMPPClientManagerPBTestCase(HttpServerTestCase):
 
     @defer.inlineCallbacks
     def tearDown(self):
-        yield HttpServerTestCase.tearDown(self)
-
-        if self.SMPPClientManagerPBProxy.isConnected:
-            yield self.SMPPClientManagerPBProxy.disconnect()
-        yield self.CManagerServer.stopListening()
-        for q in self.amqpBroker.queues:
-            yield self.amqpBroker.chan.queue_delete(queue=q)
-        yield self.amqpClient.disconnect()
-        yield self.redisClient.disconnect()
+        try:
+            yield HttpServerTestCase.tearDown(self)
+        finally:
+            if hasattr(self, 'SMPPClientManagerPBProxy') and self.SMPPClientManagerPBProxy.isConnected:
+                yield self.SMPPClientManagerPBProxy.disconnect()
+            if hasattr(self, 'CManagerServer'):
+                yield self.CManagerServer.stopListening()
+            if hasattr(self, 'amqpBroker') and hasattr(self.amqpBroker, 'queues'):
+                for q in self.amqpBroker.queues:
+                    try:
+                        yield self.amqpBroker.chan.queue_delete(queue=q)
+                    except Exception:
+                        pass
+            if hasattr(self, 'amqpClient'):
+                yield self.amqpClient.disconnect()
+            if hasattr(self, 'redisClient'):
+                yield self.redisClient.disconnect()
 
 
 class AuthenticatedTestCases(RouterPBProxy, RouterPBTestCase):
@@ -1359,8 +1368,10 @@ class HappySMSCTestCase(SMPPClientManagerPBTestCase):
 
     @defer.inlineCallbacks
     def tearDown(self):
-        yield self.SMSCPort.stopListening()
-        yield SMPPClientManagerPBTestCase.tearDown(self)
+        try:
+            yield self.SMSCPort.stopListening()
+        finally:
+            yield SMPPClientManagerPBTestCase.tearDown(self)
 
 
 class SubmitSmTestCaseTools:
