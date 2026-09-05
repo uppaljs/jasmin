@@ -57,6 +57,8 @@ class CodingTestCases(RouterPBProxy, HappySMSCTestCase, SubmitSmTestCaseTools):
             pass
         # Call parent teardown
         yield HappySMSCTestCase.tearDown(self)
+        # Force cleanup any remaining connections
+        reactor.disconnectAll()
 
     @defer.inlineCallbacks
     def run_test(self, content, encoded_content=None, datacoding=None, port=1401):
@@ -86,10 +88,19 @@ class CodingTestCases(RouterPBProxy, HappySMSCTestCase, SubmitSmTestCaseTools):
 
         # Wait 2 seconds before stopping SmppClientConnectors
         exitDeferred = defer.Deferred()
-        reactor.callLater(2, exitDeferred.callback, None)
-        yield exitDeferred
-
-        yield self.stopSmppClientConnectors()
+        delayedCall = reactor.callLater(2, exitDeferred.callback, None)
+        try:
+            yield exitDeferred
+        except Exception:
+            # Cancel the delayed call if it's still pending
+            if delayedCall.active():
+                delayedCall.cancel()
+            raise
+        finally:
+            try:
+                yield self.stopSmppClientConnectors()
+            except Exception:
+                pass
 
         # Run tests
         self.assertEqual(msgStatus, 'Success')

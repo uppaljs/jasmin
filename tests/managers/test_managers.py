@@ -34,6 +34,8 @@ from jasmin.routing.router import RouterPB
 from jasmin.tools.cred.portal import JasminPBRealm
 from jasmin.tools.proxies import ConnectError
 from jasmin.tools.spread.pb import JasminPBPortalRoot
+from tests.routing.test_router import RouterPBTestCase
+from jasmin.routing.proxies import RouterPBProxy
 
 
 @defer.inlineCallbacks
@@ -64,6 +66,9 @@ class SMPPClientPBTestCase(TestCase):
         # Wait for AMQP Broker connection to get ready
         yield self.amqpBroker.getChannelReadyDeferred()
 
+        # Register cleanup for AMQP
+        self.addCleanup(self._cleanup_amqp)
+
         # Launch the client manager server
         pbRoot = SMPPClientManagerPB(self.SMPPClientPBConfigInstance)
 
@@ -79,9 +84,16 @@ class SMPPClientPBTestCase(TestCase):
         self.PBServer = reactor.listenTCP(0, pb.PBServerFactory(jPBPortalRoot))
         self.pbPort = self.PBServer.getHost().port
 
+        # Register cleanup for PBServer
+        pbServer = self.PBServer
+        self.addCleanup(lambda: pbServer.stopListening())
+
         # Launch the router server
         self.RouterPBInstance = RouterPB(RouterPBConfig())
         pbRoot.addRouterPB(self.RouterPBInstance)
+
+        # Register cleanup for RouterPB
+        self.addCleanup(self.RouterPBInstance.cancelPersistenceTimer)
 
         # Default SMPPClientConfig
         defaultSMPPClientId = '001-testconnector'
@@ -92,20 +104,53 @@ class SMPPClientPBTestCase(TestCase):
                                               port=9002,
                                               )
 
+    def _cleanup_amqp(self):
+        """Cleanup AMQP connection - called by addCleanup"""
+        if hasattr(self, 'amqpBroker'):
+            try:
+                self.amqpBroker.stopTrying()
+            except Exception:
+                pass
+            try:
+                if hasattr(self.amqpBroker, 'client') and self.amqpBroker.client:
+                    if hasattr(self.amqpBroker.client, 'transport') and self.amqpBroker.client.transport:
+                        self.amqpBroker.client.transport.abortConnection()
+            except Exception:
+                pass
+            # Force clear client reference
+            try:
+                self.amqpBroker.client = None
+            except Exception:
+                pass
+        if hasattr(self, 'amqpClient'):
+            try:
+                self.amqpClient.disconnect()
+            except Exception:
+                pass
+
     @defer.inlineCallbacks
     def tearDown(self):
-        yield self.RouterPBInstance.cancelPersistenceTimer()
-        yield self.PBServer.stopListening()
-        for q in self.amqpBroker.queues:
-            yield self.amqpBroker.chan.queue_delete(queue=q)
-        yield self.amqpClient.disconnect()
+        # Cleanup is handled by addCleanup registered in setUp
+        # Force disconnect all remaining connections
+        reactor.disconnectAll()
 
 
 class SMPPClientPBProxyTestCase(SMPPClientManagerPBProxy, SMPPClientPBTestCase):
     @defer.inlineCallbacks
+    def setUp(self, authentication=False):
+        yield SMPPClientPBTestCase.setUp(self, authentication)
+        # Register cleanup for proxy disconnect
+        self.addCleanup(self._cleanup_proxy)
+
+    def _cleanup_proxy(self):
+        if self.isConnected:
+            try:
+                self.disconnect()
+            except Exception:
+                pass
+
     def tearDown(self):
-        yield SMPPClientPBTestCase.tearDown(self)
-        yield self.disconnect()
+        pass
 
 
 class SMSCSimulator(SMPPClientPBProxyTestCase):
@@ -116,11 +161,10 @@ class SMSCSimulator(SMPPClientPBProxyTestCase):
         factory = Factory()
         factory.protocol = HappySMSC
         self.SMSCPort = reactor.listenTCP(self.defaultConfig.port, factory)
+        self.addCleanup(self.SMSCPort.stopListening)
 
-    @defer.inlineCallbacks
     def tearDown(self):
-        yield SMPPClientPBProxyTestCase.tearDown(self)
-        yield self.SMSCPort.stopListening()
+        pass
 
 
 class LastClientFactory(Factory):
@@ -140,11 +184,10 @@ class SMSCSimulatorRecorder(SMPPClientPBProxyTestCase):
         factory = LastClientFactory()
         factory.protocol = HappySMSCRecorder
         self.SMSCPort = reactor.listenTCP(self.defaultConfig.port, factory)
+        self.addCleanup(self.SMSCPort.stopListening)
 
-    @defer.inlineCallbacks
     def tearDown(self):
-        yield SMPPClientPBProxyTestCase.tearDown(self)
-        yield self.SMSCPort.stopListening()
+        pass
 
 
 class SMSCSimulatorDeliverSM(SMPPClientPBProxyTestCase):
@@ -155,17 +198,26 @@ class SMSCSimulatorDeliverSM(SMPPClientPBProxyTestCase):
         factory = Factory()
         factory.protocol = DeliverSMSMSC
         self.SMSCPort = reactor.listenTCP(self.defaultConfig.port, factory)
+        self.addCleanup(self.SMSCPort.stopListening)
+
+    def tearDown(self):
+        pass
+
+
+class AuthenticatedTestCases(SMPPClientManagerPBProxy, RouterPBProxy, RouterPBTestCase):
+    @defer.inlineCallbacks
+    def setUp(self, authentication=False):
+        yield RouterPBTestCase.setUp(self, authentication=True)
+        # Add RouterPB to client manager
+        self.SMPPClientPBConfigInstance = SMPPClientPBConfig()
+        self.SMPPClientPBConfigInstance.authentication = False
+        self.clientManager_f = SMPPClientManagerPB(self.SMPPClientPBConfigInstance)
+        self.clientManager_f.addRouterPB(self.pbRoot_f)
 
     @defer.inlineCallbacks
     def tearDown(self):
-        yield SMPPClientPBProxyTestCase.tearDown(self)
-        yield self.SMSCPort.stopListening()
-
-
-class AuthenticatedTestCases(SMPPClientPBProxyTestCase):
-    @defer.inlineCallbacks
-    def setUp(self, authentication=False):
-        yield SMPPClientPBProxyTestCase.setUp(self, authentication=True)
+        yield self.disconnect()
+        yield RouterPBTestCase.tearDown(self)
 
     @defer.inlineCallbacks
     def test_connect_success(self):
@@ -220,10 +272,13 @@ class ConfigurationPersistenceTestCases(SMPPClientPBProxyTestCase):
     @defer.inlineCallbacks
     def tearDown(self):
         # Remove persisted configurations
-        filelist = glob.glob("%s/*" % self.SMPPClientPBConfigInstance.store_path)
-        for f in filelist:
-            if os.path.isfile(f):
-                os.remove(f)
+        try:
+            filelist = glob.glob("%s/*" % self.SMPPClientPBConfigInstance.store_path)
+            for f in filelist:
+                if os.path.isfile(f):
+                    os.remove(f)
+        except Exception:
+            pass
 
         yield SMPPClientPBProxyTestCase.tearDown(self)
 
