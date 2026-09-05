@@ -60,24 +60,51 @@ class jCliTestCases(ProtocolTestCases):
     @defer.inlineCallbacks
     def tearDown(self):
         # Delete any previously persisted configuration
-        persistenceFolder = self.RouterPBConfigInstance.store_path
-        for the_file in os.listdir(persistenceFolder):
-            if the_file == '.gitignore':
-                # Dont delete any hidden file
-                continue
-            file_path = os.path.join(persistenceFolder, the_file)
-            if os.path.isfile(file_path):
-                os.unlink(file_path)
+        try:
+            persistenceFolder = self.RouterPBConfigInstance.store_path
+            for the_file in os.listdir(persistenceFolder):
+                if the_file == '.gitignore':
+                    continue
+                file_path = os.path.join(persistenceFolder, the_file)
+                if os.path.isfile(file_path):
+                    os.unlink(file_path)
+        except Exception:
+            pass
 
-        yield self.RouterPB_f.cancelPersistenceTimer()
-        yield self.amqpClient.disconnect()
-        for q in self.amqpBroker.queues:
-            try:
-                yield self.amqpBroker.chan.queue_delete(queue=q)
-            except:
-                # Likely the channel is closed so we can't clean up the queues
-                pass
-        yield self.amqpBroker.disconnect()
+        try:
+            yield self.RouterPB_f.cancelPersistenceTimer()
+        except Exception:
+            pass
+
+        # Stop AMQP retrying first
+        try:
+            self.amqpBroker.stopTrying()
+        except Exception:
+            pass
+
+        # Force close AMQP transport
+        try:
+            if hasattr(self.amqpBroker, 'client') and self.amqpBroker.client:
+                if hasattr(self.amqpBroker.client, 'transport') and self.amqpBroker.client.transport:
+                    self.amqpBroker.client.transport.abortConnection()
+                self.amqpBroker.client = None
+        except Exception:
+            pass
+
+        # Delete queues
+        try:
+            for q in list(self.amqpBroker.queues):
+                try:
+                    yield self.amqpBroker.chan.queue_delete(queue=q)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        try:
+            yield self.amqpClient.disconnect()
+        except Exception:
+            pass
         
 
 
@@ -126,6 +153,8 @@ class jCliWithoutAuthTestCases(jCliTestCases):
     def tearDown(self):
         jCliTestCases.tearDown(self)
         self.proto.connectionLost(None)
+        # Force cleanup any remaining connections
+        reactor.disconnectAll()
 
 class BasicTestCases(jCliWithoutAuthTestCases):
     def test_quit(self):
