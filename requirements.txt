@@ -7,7 +7,7 @@ pyparsing~=3.3.2
 python-dateutil~=2.9.0
 service_identity~=26.1.0
 # lockfile is abandoned; swap to filelock in a follow-up.
-lockfile~=0.12.2
+filelock~=3.32.0
 
 falcon~=4.3.1
 txredisapi~=1.4.12

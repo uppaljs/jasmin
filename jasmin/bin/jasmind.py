@@ -6,7 +6,7 @@ import sys
 import traceback
 import logging
 
-from lockfile import FileLock, LockTimeout, AlreadyLocked
+from filelock import FileLock, Timeout
 from twisted.cred import portal
 from twisted.cred.checkers import AllowAnonymousAccess, InMemoryUsernamePasswordDatabaseDontUse
 from twisted.internet import reactor, defer
@@ -546,11 +546,9 @@ if __name__ == '__main__':
     except usage.UsageError as errortext:
         print('%s: %s' % (sys.argv[0], errortext))
         print('%s: Try --help for usage details.' % (sys.argv[0]))
-    except LockTimeout:
-        print("Lock not acquired ! exiting")
-    except AlreadyLocked:
-        print("There's another instance on jasmind running, exiting.")
+    except Timeout:
+        print("Lock not acquired or already locked ! exiting")
     finally:
         # Release the lock
-        if lock is not None and lock.i_am_locking():
+        if lock is not None and lock.is_locked:
             lock.release()
