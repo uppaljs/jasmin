@@ -35,7 +35,7 @@ WORKDIR /build
 
 COPY . .
 
-RUN pip install .
+RUN pip install --no-build-isolation .
 
 ENV UNICODEMAP_JP unicode-ascii
 
