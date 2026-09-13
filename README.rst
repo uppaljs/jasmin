@@ -5,6 +5,67 @@ Jasmin - Open source SMS gateway
 
 |contribs| |ubuntu-package| |redhat-package| |ci| |docker| |docs| |support|
 
+.. warning::
+   **This is a fork of the original Jasmin SMS Gateway**
+
+   This repository is a maintained fork of `jookies/jasmin <https://github.com/jookies/jasmin>`_
+   with modernized dependencies, Python 3.13/3.14 support, and critical bug fixes.
+
+   **Forked libraries:**
+
+   * `smpp.pdu <https://github.com/uppaljs/smpp.pdu>`_ - SMPP PDU parsing (strict ASCII decoding)
+   * `smpp.twisted <https://github.com/uppaljs/smpp.twisted>`_ - SMPP 3.4 Client (Twisted 26.x compatible)
+   * `txamqp <https://github.com/uppaljs/txamqp>`_ - AMQP client (Twisted 26.x compatible)
+
+   All forked libraries are maintained at `github.com/uppaljs <https://github.com/uppaljs>`_.
+
+Changes from upstream
+*********************
+
+This fork includes the following enhancements and modifications over the upstream Jasmin project:
+
+**Dependency Upgrades**
+
+* Twisted 23.x → 26.4.0 (modern event-driven networking)
+* cryptography 3.x → 50.0.1 (latest security patches)
+* pyopenssl → 26.4.0
+* requests → 2.34.2
+* service_identity → 26.1.0
+* celery 5.4 → 5.6.0
+* redis 5.1 → 8.1.0
+* falcon 3.1 → 4.3.1
+* treq 24.9 → 26.7.0
+* pyasn1, pyparsing, tabulate, txredisapi, prometheus-client (latest versions)
+
+**Replaced Abandoned Packages**
+
+* `lockfile` (unmaintained since 2017) → `filelock` 3.32.0 (actively maintained)
+
+**Python Support**
+
+* Added Python 3.13 and 3.14 support (upstream only supports 3.11-3.12)
+* Docker image uses Python 3.14 (python:3.14-slim-bookworm)
+
+**Test Infrastructure Fixes**
+
+* Fixed dirty reactor errors in test_managers (txAMQP3 cleanup)
+* Fixed port 9002 leaks in SMPP simulator tests
+* Fixed reactor.callLater() leaks in test_encoding
+* Fixed AMQP cleanup in CLI tests
+* All 1056 tests pass (1034 successes, 22 pre-existing skips)
+
+**Bug Fixes**
+
+* Fixed SMPP PDU ASCII decoding to use strict mode (no more silent character replacement)
+* Fixed test_pdu_decoding to expect strict ASCII behavior
+* Fixed tearDown methods with proper try/finally cleanup patterns
+* Fixed addCleanup pattern for reliable resource cleanup
+
+**Docker Improvements**
+
+* Added ``git`` to Dockerfile for pip install from git repos
+* Improved dependency installation order for Python 3.14 compatibility
+
 Introduction
 ************
 Jasmin is a very complete open source SMS Gateway with many enterprise-class features such as:
