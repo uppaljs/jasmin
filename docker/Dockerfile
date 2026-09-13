@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bookworm
+FROM python:3.14-slim-bookworm
 
 MAINTAINER Jookies LTD <jasmin@jookies.net>
 
@@ -35,7 +35,7 @@ WORKDIR /build
 
 COPY . .
 
-RUN pip install .
+RUN pip install -r requirements.txt && pip install --no-deps .
 
 ENV UNICODEMAP_JP unicode-ascii
 
