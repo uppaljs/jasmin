@@ -97,6 +97,30 @@ and are mainly based on `Twisted matrix <https://twistedmatrix.com/>`_, an event
 
 Getting started
 ***************
+
+Installation
+============
+
+**From source:**
+
+::
+
+  $ git clone https://github.com/uppaljs/jasmin.git
+  $ cd jasmin
+  $ pip install .
+
+**Via pip:**
+
+::
+
+  $ pip install git+https://github.com/uppaljs/jasmin.git
+
+**Via Docker:**
+
+::
+
+  $ docker run -d --name jasmin ghcr.io/uppaljs/jasmin:master
+
 Refer to `Installation steps <http://docs.jasminsms.com/en/latest/installation/index.html>`_ to get Jasmin gateway up and running quickly with a simple SMS sending scenario.
 
 Documentation
@@ -117,8 +141,8 @@ Links
 * `Project home page <http://www.jasminsms.com>`_
 * `Documentation <http://docs.jasminsms.com>`_
 * `Support <https://groups.google.com/forum/#!forum/jasmin-sms-gateway>`_
-* `Continuous Integration <https://github.com/jookies/jasmin/actions>`_
-* `Source code <https://github.com/jookies/jasmin>`_
+* `Continuous Integration <https://github.com/uppaljs/jasmin/actions>`_
+* `Source code <https://github.com/uppaljs/jasmin>`_
 * `Kubernetes deployment <https://docs.jasminsms.com/en/latest/installation/index.html#kubernetes-cluster>`_ or `/Experimental/ Deploy to Heroku <https://heroku.com/deploy?template=https://github.com/jookies/jasmin>`_
 
 Contributors
@@ -148,10 +172,10 @@ Credits
     :scale: 100%
     :target: https://github.com/jookies/jasmin/blob/master/CODE_OF_CONDUCT.md
 
-.. |ci| image:: https://github.com/jookies/jasmin/actions/workflows/ci.yml/badge.svg
+.. |ci| image:: https://github.com/uppaljs/jasmin/actions/workflows/ci.yml/badge.svg
     :alt: Build status
     :scale: 100%
-    :target: https://github.com/jookies/jasmin/actions
+    :target: https://github.com/uppaljs/jasmin/actions
 
 .. |ubuntu-package| image:: https://img.shields.io/badge/package-ubuntu-brightgreen.svg?style=flat-square
     :alt: Ubuntu package
@@ -163,10 +187,10 @@ Credits
     :scale: 100%
     :target: https://packagecloud.io/jookies/jasmin-sms-gateway
 
-.. |docker| image:: https://github.com/jookies/jasmin/actions/workflows/docker.yml/badge.svg
+.. |docker| image:: https://github.com/uppaljs/jasmin/actions/workflows/docker.yml/badge.svg
     :alt: Docker image build status
     :scale: 100%
-    :target: https://github.com/jookies/jasmin/actions
+    :target: https://github.com/uppaljs/jasmin/actions
 
 .. |docs| image:: https://readthedocs.org/projects/jasmin/badge/?version=latest
     :alt: Documentation status
@@ -176,4 +200,4 @@ Credits
 .. |support| image:: https://img.shields.io/badge/discussions-GitHub-333333?logo=github
     :alt: Github discussions
     :scale: 100%
-    :target: https://github.com/jookies/jasmin/discussions
+    :target: https://github.com/uppaljs/jasmin/discussions
